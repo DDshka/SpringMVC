@@ -1,0 +1,169 @@
+.jumbotron {
+    background: url(/imgs/lil2.jpg) no-repeat;
+    background-position-y: 81%;
+    background-size: 105%;
+
+    margin-bottom: 10px!important;
+}
+
+.jumbotron a {
+    color: ghostwhite;
+}
+
+a {
+    text-decoration: none;
+    transition: all 0.5s ease;
+}
+
+.alert {
+    text-align: center;
+}
+
+a:hover {
+    color: lightcoral!important;
+    text-decoration: none!important;
+}
+
+.auth-row {
+    font-size: 18px;
+}
+
+.progress {
+    display: none;
+}
+
+#player {
+    position: fixed;
+    bottom:-10%;
+    width:100%;
+    background-color: whitesmoke;
+    transition: all 0.5s ease;
+}
+
+audio {
+    width: 100%;
+}
+
+.nobroadcasts {
+    text-align: center;
+    color: gainsboro;
+    font-size: 32px;
+    height: 200px;
+    vertical-align: middle;
+    padding: 75px 0px;
+    border: solid 1px gainsboro;
+    border-radius: 25px;
+}
+
+#content tr td {
+    vertical-align: middle;
+}
+
+.control-button {
+    background: transparent;
+    border: none;
+    outline: none;
+
+
+    border-radius: 50%;
+    margin: 0px;
+    padding: 10%;
+    text-align: center;
+    transition: all 0.2s ease-in-out;
+}
+
+.control-button:active {
+    background-color: lavender;
+}
+
+
+.control-button:after {
+    background-color: lavender;
+}
+
+.control-button:active:after {
+    background-color: lavender;
+}
+
+i.fa:hover {
+    color: #0a51c2;
+}
+
+i.fa {
+    color: cornflowerblue;
+    font-size: 30px;
+}
+
+i.fa.fa-trash-o {
+    color: red;
+}
+
+i.fa.fa-trash-o:hover {
+    color: #b30000;
+}
+
+.row.delete-hidden {
+    display: none;
+}
+
+.row-center > .row {
+    text-align: center;
+}
+
+#position {
+    transition: all 3s linear;
+}
+
+
+
+
+
+
+
+
+
+
+/* layout.css Style */
+.upload-drop-zone {
+    height: 200px;
+    border-width: 2px;
+    margin-bottom: 20px;
+}
+
+/* skin.css Style*/
+.upload-drop-zone {
+    color: #ccc;
+    border-style: dashed;
+    border-color: #ccc;
+    line-height: 200px;
+    text-align: center
+}
+.upload-drop-zone.drop {
+    color: #222;
+    border-color: #222;
+}
+
+
+
+.image-preview-input {
+    position: relative;
+    overflow: hidden;
+    margin: 0px;
+    color: #333;
+    background-color: #fff;
+    border-color: #ccc;
+}
+.image-preview-input input[type=file] {
+    position: absolute;
+    top: 0;
+    right: 0;
+    margin: 0;
+    padding: 0;
+    font-size: 20px;
+    cursor: pointer;
+    opacity: 0;
+    filter: alpha(opacity=0);
+}
+.image-preview-input-title {
+    margin-left:2px;
+}
