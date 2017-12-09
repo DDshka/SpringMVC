@@ -30,7 +30,7 @@ public class StreamFactoryImpl implements StreamFactory {
 
     @Override
     public Stream getStream(User user) {
-        stream = buildStream(user);
+        stream = new StreamInstance(user);
         return stream;
     }
 
@@ -40,98 +40,116 @@ public class StreamFactoryImpl implements StreamFactory {
         return stream;
     }
 
-    private Stream buildStream(User user) {
-        return new Stream(user) {
-            @Override
-            public void run() {
-                try {
-                    broadcast = new Broadcast();
-                    broadcast.setUser(user);
-                    broadcastService.add(broadcast);
+    private class StreamInstance extends Stream {
 
-                    String soundDestination = "/topic/" + user.getName();
-                    String statusDestination = "/topic/dashboard/" + user.getName();
+        private String soundDestination;
+        private String statusDestination;
 
-                    Track track = trackService.getByPosition(user, position);
-                    sendTrackChange(statusDestination, track.getPosition());
-                    logger.log(Level.INFO, "[BROADCAST] " + user.getName() + " has started broadcast");
-                    while (track != null) {
-                        byte[] file = track.getFile();
-                        ByteArrayInputStream inputStream = new ByteArrayInputStream(file);
+        public StreamInstance(User user) {
+            super(user);
 
-                        broadcast.setSongName(
-                                track.getArtist() + " - " + track.getTitle()
-                        );
-                        broadcastService.update(broadcast);
+            soundDestination = "/topic/" + user.getName();
+            statusDestination = "/topic/dashboard/" + user.getName();
+        }
 
-                        int seconds = (int) trackService.getLength(file);
-                        int oneSecondPackage = file.length/seconds;
+        @Override
+        public String sendTrackChange(String destination, Integer position) {
+            String json = new JSONObject()
+                    .put("position", position)
+                    .toString();
 
-                        byte buffer[] = new byte[oneSecondPackage];
-                        int count = inputStream.read(buffer);
-                        while (count != -1) {
-                            while (broadcastInterrupted) {
-                                Thread.sleep(1);
-                            }
+            smt.convertAndSend(destination, json);
+            return json;
+        }
 
-                            if (next || previous) {
-                                break;
-                            }
+        public void sleep(int millis) {
+            try {
+                Thread.sleep(millis);
+            }
+            catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
 
-                            count = inputStream.read(buffer);
+        @Override
+        public void run() {
+            broadcast = new Broadcast();
+            broadcast.setUser(user);
+            broadcastService.add(broadcast);
 
-                            smt.convertAndSend(soundDestination, Arrays.toString(buffer));
+            Track track = trackService.getByPosition(user, position);
+            if (track == null) {
+                throw new NullPointerException("User " + user.getName() + " has no tracks to broadcast");
+            }
 
-                            Thread.sleep(1000);
-                        }
+            logger.log(Level.INFO, "[BROADCAST] " + user.getName() + " has started broadcast");
+            while (track != null) {
+                broadcast.setSongName(track.getArtist() + " - " + track.getTitle());
+                broadcastService.update(broadcast);
+                sendTrackChange(statusDestination, track.getPosition());
 
-                        track = trackService.getById(user, track.getId());
+                sendPackages(track);
 
-                        if (previous) {
-                            if (position.equals(0)) {
-                                position = trackService.getLastPosition(user);
-                            }
-                            else {
-                                position = track.getPosition() - 1;
-                            }
-                        }
-                        else {
-                            if (position.equals(trackService.getLastPosition(user))) {
-                                break;
-                            }
-                            else {
-                                position = track.getPosition() + 1;
-                            }
-                        }
+                track = trackService.getById(user, track.getId());
 
-                        track = trackService.getByPosition(user, position);
-                        sendTrackChange(statusDestination, track.getPosition());
-
-                        next = previous = false;
-                        Thread.sleep(1000);
+                if (previous) {
+                    if (position.equals(0)) {
+                        position = trackService.getLastPosition(user);
                     }
-                    sendTrackChange(statusDestination, -1);
-                    broadcastService.delete(broadcast);
-                    onBroadcastStop();
-                    logger.log(Level.INFO, "[BROADCAST] " + user.getName() + "`s broadcast has ended successfully");
+                    else {
+                        position = track.getPosition() - 1;
+                    }
                 }
-                catch (Exception e) {
-                    broadcastService.delete(broadcast);
-                    onBroadcastStop();
-                    logger.log(Level.WARNING, "[BROADCAST] " + user.getName() + "`s broadcast has ended with exception. Stacktrace: ");
-                    e.printStackTrace();
+                else {
+                    if (position.equals(trackService.getLastPosition(user))) {
+                        break;
+                    }
+                    else {
+                        position = track.getPosition() + 1;
+                    }
+                }
+
+                track = trackService.getByPosition(user, position);
+                next = previous = false;
+                sleep(1000);
+            }
+            sendTrackChange(statusDestination, -1);
+            broadcastService.delete(broadcast);
+            onBroadcastStop();
+            logger.log(Level.INFO, "[BROADCAST] " + user.getName() + "`s broadcast has ended successfully");
+        }
+
+        private void sendPackages(Track track) {
+            byte[] file = track.getFile();
+            int seconds = (int) trackService.getLength(file);
+            int oneSecondPackage = file.length/seconds;
+            byte[] buffer = new byte[oneSecondPackage];
+
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(file);
+            try {
+                while (inputStream.read(buffer) != -1) {
+                    while (broadcastInterrupted) {
+                        Thread.sleep(1);
+                    }
+
+                    if (next || previous) {
+                        break;
+                    }
+
+                    smt.convertAndSend(soundDestination, Arrays.toString(buffer));
+                    sleep(1000);
                 }
             }
-
-            @Override
-            public String sendTrackChange(String destination, Integer position) {
-                String json = new JSONObject()
-                        .put("position", position)
-                        .toString();
-
-                smt.convertAndSend(destination, json);
-                return json;
+            catch (Exception e) {
+                error(e);
             }
-        };
+        }
+
+        private void error(Exception e) {
+            broadcastService.delete(broadcast);
+            onBroadcastStop();
+            logger.log(Level.WARNING, "[BROADCAST] " + user.getName() + "`s broadcast has ended with exception. Stacktrace: ");
+            e.printStackTrace();
+        }
     }
 }
